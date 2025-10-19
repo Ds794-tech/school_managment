@@ -14,6 +14,7 @@ import VendorSignup from "./pages/VendorSignup";
 import VendorLogin from "./pages/VendorLogin";
 import VendorDashboard from "./pages/VendorDashboard";
 import BookForm from "./pages/BookForm";
+import ClassForm from "./pages/ClassForm";
 
 
 //  Protected Route for Schools
@@ -90,6 +91,15 @@ export default function App() {
         element={
           <SchoolProtectedRoute>
             <BookForm onSuccess={() => window.location.href = '/school-dashboard'} />
+          </SchoolProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/class-form/:id?"
+        element={
+          <SchoolProtectedRoute>
+            <ClassForm onSuccess={() => window.location.href = '/school-dashboard'} />
           </SchoolProtectedRoute>
         }
       />

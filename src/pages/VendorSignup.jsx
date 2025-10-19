@@ -5,64 +5,71 @@ import Swal from "sweetalert2";
 export default function VendorSignup() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    school_name: "",
-    school_email: "",
-    contact_person_name: "",
-    contact_number: "", 
-    designation_data: 1, // default ID, you can make it selectable
-     school_address: "",
-    address_line_1: "",
-    address_line_2: "",
-    landmark: "",
+    vendor_name: "",
+    vendor_mobile: "",
+    vendor_email: "",
+    vendor_pass: "",
+    vendor_companey_name: "",
+    vendor_website: "",
+    companey_GST_number: "",
+    companey_logo: null, // store file object
     city: "",
-    district: "",
+    state: "",
+    pincode: "",
   });
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, files } = e.target;
     setForm({
       ...form,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: files ? files[0] : value, // ✅ handle files correctly
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ✅ Use FormData (don't JSON.stringify it)
+    const formData = new FormData();
+    for (const key in form) {
+      formData.append(key, form[key]);
+    }
+
     try {
-      const res = await fetch("https://digiteach.pythonanywhere.com/school/", {
+      const res = await fetch("https://digiteach.pythonanywhere.com/vendor/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: formData,
       });
 
       if (!res.ok) {
         const errData = await res.json();
         console.error("Error:", errData);
-        let errorMessage = "Failed to create school";
+        let errorMessage = "Failed to create vendor";
         if (errData.detail) {
           errorMessage = errData.detail;
-        } else if (typeof errData === 'object') {
-          errorMessage = Object.values(errData).flat().join('\n');
+        } else if (typeof errData === "object") {
+          errorMessage = Object.values(errData).flat().join("\n");
         }
         throw new Error(errorMessage);
       }
 
       await Swal.fire({
-        position: 'center',
-        icon: 'success',
-        title: 'Success!',
-        text: 'School created successfully! Waiting for admin approval.',
+        position: "center",
+        icon: "success",
+        title: "Success!",
+        text: "Vendor created successfully! Waiting for admin approval.",
         showConfirmButton: true,
-        confirmButtonColor: '#2563eb',
+        confirmButtonColor: "#2563eb",
       });
+
       navigate("/admin-dashboard");
     } catch (err) {
       await Swal.fire({
-        position: 'center',
-        icon: 'error',
-        title: 'Error',
-        text: err.message || 'An error occurred while creating the school',
-        confirmButtonColor: '#dc2626',
+        position: "center",
+        icon: "error",
+        title: "Error",
+        text: err.message || "An error occurred while creating the Vendor",
+        confirmButtonColor: "#dc2626",
       });
     }
   };
@@ -73,92 +80,86 @@ export default function VendorSignup() {
         onSubmit={handleSubmit}
         className="w-full max-w-lg bg-white p-8 rounded-lg shadow-lg space-y-4"
       >
-        <h2 className="text-2xl font-bold mb-4 text-center">School Signup</h2>
+        <h2 className="text-2xl font-bold mb-4 text-center">Vendor Signup</h2>
 
         <input
           type="text"
-          name="school_name"
-          placeholder="School Name"
-          value={form.school_name}
+          name="vendor_name"
+          placeholder="Vendor Name"
+          value={form.vendor_name}
           onChange={handleChange}
           className="w-full p-2 border rounded"
           required
         />
+
+        <input
+          type="text"
+          name="vendor_mobile"
+          placeholder="Vendor Mobile"
+          value={form.vendor_mobile}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+          required
+        />
+
         <input
           type="email"
-          name="school_email"
-          placeholder="School Email"
-          value={form.school_email}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-          required
-        />
-       
-        <input
-          type="text"
-          name="contact_person_name"
-          placeholder="Contact Person Name"
-          value={form.contact_person_name}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-          required
-        />
-        <input
-          type="text" // changed from number to text
-          name="contact_number"
-          placeholder="Contact Number"
-          value={form.contact_number}
+          name="vendor_email"
+          placeholder="Vendor Email"
+          value={form.vendor_email}
           onChange={handleChange}
           className="w-full p-2 border rounded"
           required
         />
 
-        {/* Designation as a select */}
-        <select
-          name="designation_data"
-          value={form.designation_data}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-        >
-          <option value="">Select</option>
-          <option value={1}>IT Head</option>
-          <option value={2}>Principal</option>
-          <option value={3}>Teacher</option>
-        </select>
-
- <input
-          type="text"
-          name="school_address"
-          placeholder="School Address"
-          value={form.school_address}
+        <input
+          type="password"
+          name="vendor_pass"
+          placeholder="Vendor Password"
+          value={form.vendor_pass}
           onChange={handleChange}
           className="w-full p-2 border rounded"
           required
         />
+
         <input
           type="text"
-          name="address_line_1"
-          placeholder="Address Line 1"
-          value={form.address_line_1}
+          name="vendor_companey_name"
+          placeholder="Vendor Company Name"
+          value={form.vendor_companey_name}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+          required
+        />
+
+        <input
+          type="text"
+          name="vendor_website"
+          placeholder="Vendor Website"
+          value={form.vendor_website}
           onChange={handleChange}
           className="w-full p-2 border rounded"
         />
+
         <input
           type="text"
-          name="address_line_2"
-          placeholder="Address Line 2"
-          value={form.address_line_2}
+          name="companey_GST_number"
+          placeholder="Company GST Number"
+          value={form.companey_GST_number}
           onChange={handleChange}
           className="w-full p-2 border rounded"
         />
+
+        {/* ✅ File input correctly handled */}
         <input
-          type="text"
-          name="landmark"
-          placeholder="Landmark"
-          value={form.landmark}
+          type="file"
+          name="companey_logo"
+          accept="image/*"
           onChange={handleChange}
           className="w-full p-2 border rounded"
+          required
         />
+
         <input
           type="text"
           name="city"
@@ -168,11 +169,22 @@ export default function VendorSignup() {
           className="w-full p-2 border rounded"
           required
         />
+
         <input
           type="text"
-          name="district"
-          placeholder="District"
-          value={form.district}
+          name="state"
+          placeholder="State"
+          value={form.state}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+          required
+        />
+
+        <input
+          type="text"
+          name="pincode"
+          placeholder="Pincode"
+          value={form.pincode}
           onChange={handleChange}
           className="w-full p-2 border rounded"
           required

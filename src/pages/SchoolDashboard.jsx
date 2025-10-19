@@ -631,8 +631,10 @@ import {
   FaClock,
   FaMoneyBillWave,
   FaInfoCircle,
-  FaBook
+  FaBook,
+  FaSchool
 } from "react-icons/fa";
+import { FaBookBookmark } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
 
@@ -644,13 +646,22 @@ export default function SchoolDashboard({ setIsSchool }) {
   const [editData, setEditData] = useState({});
   const [jobs, setJobs] = useState([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
+  const [isLoadingBooks, setIsLoadingBooks] = useState(false);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(false);
+
   const [book, setBooks] = useState([]);
+  const [classes, setClasses] = useState([]);
   // Modals
   const [selectedJob, setSelectedJob] = useState(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
   const [showApplicants, setShowApplicants] = useState(false);
   const [selectedBook, setSelectBook] = useState(null);
   const [showBookDetails, setShowBookDetails] = useState(false);
+  const [bookSet, setBookSet] = useState([]);
+  const [filterYear, setFilterYear] = useState(null);
+  const [filteredClasses, setFilteredClasses] = useState([]);
+  // const [selectedClass, setSelectBook] = useState(null);
+  // const [selectedBook, setSelectBook] = useState(null);
 
   const schoolId = localStorage.getItem("schoolId");
   const navigate = useNavigate();
@@ -675,6 +686,7 @@ export default function SchoolDashboard({ setIsSchool }) {
   };
 
   const fetchBooks = async () => {
+    setIsLoadingBooks(true);
     try {
       const res = await fetch("https://digiteach.pythonanywhere.com/books/");
       if (!res.ok) throw new Error("Failed to fetch schools");
@@ -684,13 +696,61 @@ export default function SchoolDashboard({ setIsSchool }) {
       // );
       console.log(result.data);
       setBooks(result.data || []);
+      setIsLoadingBooks(false)
     } catch (err) {
       console.error(err);
       setBooks([]);
+      setIsLoadingBooks(false)
     } finally {
-      setLoading(false);
+      setIsLoadingBooks(false);
     }
   };
+
+  const fetchBookSet = async () => {
+    setIsLoadingBooks(true);
+    try {
+      const res = await fetch("https://digiteach.pythonanywhere.com/book_set/");
+      if (!res.ok) throw new Error("Failed to fetch schools");
+      const result = await res.json();
+      // const currentSchool = result.data.find(
+      //   (s) => s.id.toString() === schoolId
+      // );
+      console.log(result.data);
+      setBookSet(result.data || []);
+      setIsLoadingBooks(false)
+    } catch (err) {
+      console.error(err);
+      setBookSet([]);
+      setIsLoadingBooks(false)
+    } finally {
+      setIsLoadingBooks(false);
+    }
+  };
+
+  const fetchClasses = async () => {
+    setIsLoadingClasses(true);
+    try {
+      const res = await fetch("https://digiteach.pythonanywhere.com/classes/");
+      if (!res.ok) throw new Error("Failed to fetch schools");
+      const result = await res.json();
+      const currentData = result.data.filter(
+        (s) => s.class_name.includes(filterYear)
+      );
+      console.log(currentData, 'currentData');
+      setClasses(currentData || result.data);
+      setFilteredClasses(result.data);
+      setIsLoadingClasses(false)
+    } catch (err) {
+      console.error(err);
+      setClasses([]);
+      setFilteredClasses([]);
+      setIsLoadingClasses(false)
+    } finally {
+      setIsLoadingClasses(false);
+    }
+  };
+
+  console.log(filterYear, 'filterYear');
 
   // Fetch jobs and applicants
   const fetchJobs = async () => {
@@ -740,8 +800,10 @@ export default function SchoolDashboard({ setIsSchool }) {
       fetchSchoolProfile();
       if (activeTab === "Jobs") fetchJobs();
       if (activeTab === "Book Management") fetchBooks();
+      if (activeTab === "Class Management") fetchClasses();
+      if (activeTab === "Book Set") fetchBookSet();
     }
-  }, [schoolId, activeTab]);
+  }, [schoolId, activeTab, filterYear]);
 
   const handleLogout = async () => {
     const result = await Swal.fire({
@@ -833,6 +895,8 @@ export default function SchoolDashboard({ setIsSchool }) {
             { name: "Dashboard", icon: FaTachometerAlt },
             { name: "Jobs", icon: FaBriefcase },
             { name: "Book Management", icon: FaBook },
+            { name: "Class Management", icon: FaSchool },
+            { name: "Book Set", icon: FaBookBookmark },
             { name: "Profile", icon: FaUser },
           ].map((tab) => (
             <button
@@ -1184,7 +1248,7 @@ export default function SchoolDashboard({ setIsSchool }) {
         {activeTab === "Book Management" && (
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Posted Books List</h2>
+              <h2 className="text-2xl md:text-2xl font-bold text-gray-800">Posted Books List</h2>
               <button
                 onClick={() => navigate("/book-form")}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2"
@@ -1193,8 +1257,8 @@ export default function SchoolDashboard({ setIsSchool }) {
               </button>
             </div>
 
-            {isLoadingJobs ? (
-              <p>Loading jobs...</p>
+            {isLoadingBooks ? (
+              <p>Loading Books...</p>
             ) : book.length === 0 ? (
               <div className="bg-white rounded-xl shadow p-6 text-center">
                 <p className="text-gray-500 mb-4">No Book posted yet</p>
@@ -1319,7 +1383,7 @@ export default function SchoolDashboard({ setIsSchool }) {
           </div>
         )}
 
-         {/* book Details Modal */}
+        {/* book Details Modal */}
         {showBookDetails && selectedBook && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
@@ -1335,6 +1399,298 @@ export default function SchoolDashboard({ setIsSchool }) {
             </div>
           </div>
         )}
+
+        {activeTab === "Class Management" && (
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <h2 className="text-2xl md:text-2xl font-bold text-gray-800">Posted Class List</h2>
+              <div className="flex items-center gap-4">
+                <select
+                  value={filterYear}
+                  onChange={(e) => setFilterYear(e.target.value)}
+                  className="mr-4 px-3 py-2 border rounded-lg cursor-pointer px-4 py-2 rounded-lg shadow flex items-center gap-2"
+                >
+                  <option value="">All Classes</option>
+                  {
+                    filteredClasses
+                      .map(c => {
+                        return <option key={c.class_name} value={c.class_name}>{c.class_name}</option>
+                      })
+                  }
+                </select>
+                <button
+                  onClick={() => navigate("/class-form")}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2"
+                >
+                  <FaEdit /> Create Class
+                </button>
+              </div>
+            </div>
+
+            {isLoadingClasses ? (
+              <p>Loading Classes...</p>
+            ) : classes.length === 0 ? (
+              <div className="bg-white rounded-xl shadow p-6 text-center">
+                <p className="text-gray-500 mb-4">No Class posted yet</p>
+                {/* <button
+                  onClick={() => navigate("/job-form")}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                >
+                  Post Your First Book
+                </button> */}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white border rounded-lg text-sm md:text-base">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      {["ID", "Board", "Academy Year", "Class", "Actions"].map((h) => (
+                        <th key={h} className="text-left px-4 py-2">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {classes.map((classData) => (
+                      <tr key={classData.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-2">{classData.id}</td>
+                        <td className="px-4 py-2">{classData.board}</td>
+                        <td className="px-4 py-2">{classData.academic_year}</td>
+                        <td className="px-4 py-2">{classData.class_name}</td>
+                        {/* <td className="px-4 py-2">{bookData.class_name}</td> */}
+                        {/* <td className="px-4 py-2">{bookData.job_type}</td> */}
+                        {/* <td className="px-4 py-2">
+                          <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${job.status === "Open" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                            {job.status}
+                          </span>
+                        </td> */}
+                        {/* <td className="px-4 py-2">{new Date(job.posted_date).toLocaleDateString()}</td> */}
+
+                        {/* Applicants */}
+                        {/* <td className="px-4 py-2">
+                          {job.job_applicant_count > 0 ? (
+                            <button
+                              className="text-blue-600 hover:underline"
+                              onClick={() => {
+                                setSelectedJob(job);
+                                setShowApplicants(true);
+                              }}
+                            >
+                              {job.job_applicant_count} applicant{job.job_applicant_count !== 1 ? "s" : ""}
+                            </button>
+                          ) : (
+                            <span className="text-gray-400">No applicants</span>
+                          )}
+                        </td> */}
+
+                        {/* Actions */}
+                        <td className="px-4 py-2 flex justify-start gap-3">
+                          {/* <button
+                            className="text-blue-600 hover:text-blue-800 text-lg"
+                            onClick={() => {
+                              setSelectBook(bookData);
+                              setShowBookDetails(true);
+                            }}
+                          >
+                            <FaEye />
+                          </button> */}
+                          <button
+                            className="text-yellow-600 hover:text-yellow-800 text-lg"
+                            onClick={() => navigate(`/class-form/${classData.id}`, { onSuccess: fetchClasses })}
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            className="text-red-600 hover:text-red-800 text-lg"
+                            onClick={async () => {
+                              const result = await Swal.fire({
+                                title: "Are you sure?",
+                                text: "Do you want to delete this Class?",
+                                icon: "warning",
+                                showCancelButton: true,
+                                confirmButtonColor: "#dc2626",
+                                cancelButtonColor: "#6b7280",
+                                confirmButtonText: "Yes, delete it!",
+                                cancelButtonText: "Cancel",
+                                reverseButtons: true,
+                                position: "center",
+                              });
+
+                              if (result.isConfirmed) {
+                                try {
+                                  const res = await fetch(`https://digiteach.pythonanywhere.com/classes/${classData.id}/`, {
+                                    method: "DELETE",
+                                  });
+                                  if (!res.ok) throw new Error("Failed to delete Class");
+
+                                  await Swal.fire({
+                                    title: "Deleted!",
+                                    text: "Class deleted successfully.",
+                                    icon: "success",
+                                    confirmButtonColor: "#16a34a",
+                                  });
+                                  fetchClasses();
+                                } catch (err) {
+                                  console.error(err);
+                                  Swal.fire({
+                                    icon: "error",
+                                    title: "Failed",
+                                    text: "Could not delete Class",
+                                    confirmButtonColor: "#dc2626",
+                                  });
+                                }
+                              }
+                            }}
+                          >
+                            <FaTrash />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "Book Set" && (
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <h2 className="text-2xl md:text-2xl font-bold text-gray-800">Posted Book Set List</h2>
+              <button
+                onClick={() => navigate("/bookset-form")}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2"
+              >
+                <FaEdit /> Create Book Set
+              </button>
+            </div>
+
+            {isLoadingBooks ? (
+              <p>Loading BooK Set...</p>
+            ) : bookSet.length === 0 ? (
+              <div className="bg-white rounded-xl shadow p-6 text-center">
+                <p className="text-gray-500 mb-4">No Book Set posted yet</p>
+                {/* <button
+                  onClick={() => navigate("/job-form")}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                >
+                  Post Your First Book
+                </button> */}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white border rounded-lg text-sm md:text-base">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      {["Book Set ID", "Class ID", "Academy Year", "Actions"].map((h) => (
+                        <th key={h} className="text-left px-4 py-2">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookSet.map((bookData) => (
+                      <tr key={bookData.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-2">{bookData.id}</td>
+                        <td className="px-4 py-2">{bookData.class_detail_id}</td>
+                        <td className="px-4 py-2">{bookData.academic_year}</td>
+                        {/* <td className="px-4 py-2">{bookData.class_name}</td> */}
+                        {/* <td className="px-4 py-2">{bookData.class_name}</td> */}
+                        {/* <td className="px-4 py-2">{bookData.job_type}</td> */}
+                        {/* <td className="px-4 py-2">
+                          <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${job.status === "Open" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                            {job.status}
+                          </span>
+                        </td> */}
+                        {/* <td className="px-4 py-2">{new Date(job.posted_date).toLocaleDateString()}</td> */}
+
+                        {/* Applicants */}
+                        {/* <td className="px-4 py-2">
+                          {job.job_applicant_count > 0 ? (
+                            <button
+                              className="text-blue-600 hover:underline"
+                              onClick={() => {
+                                setSelectedJob(job);
+                                setShowApplicants(true);
+                              }}
+                            >
+                              {job.job_applicant_count} applicant{job.job_applicant_count !== 1 ? "s" : ""}
+                            </button>
+                          ) : (
+                            <span className="text-gray-400">No applicants</span>
+                          )}
+                        </td> */}
+
+                        {/* Actions */}
+                        <td className="px-4 py-2 flex justify-start gap-3">
+                          {/* <button
+                            className="text-blue-600 hover:text-blue-800 text-lg"
+                            onClick={() => {
+                              setSelectBook(bookData);
+                              setShowBookDetails(true);
+                            }}
+                          >
+                            <FaEye />
+                          </button> */}
+                          <button
+                            className="text-yellow-600 hover:text-yellow-800 text-lg"
+                            onClick={() => navigate(`/bookset-form/${bookData.id}`, { onSuccess: fetchBookSet })}
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            className="text-red-600 hover:text-red-800 text-lg"
+                            onClick={async () => {
+                              const result = await Swal.fire({
+                                title: "Are you sure?",
+                                text: "Do you want to delete this book set?",
+                                icon: "warning",
+                                showCancelButton: true,
+                                confirmButtonColor: "#dc2626",
+                                cancelButtonColor: "#6b7280",
+                                confirmButtonText: "Yes, delete it!",
+                                cancelButtonText: "Cancel",
+                                reverseButtons: true,
+                                position: "center",
+                              });
+
+                              if (result.isConfirmed) {
+                                try {
+                                  const res = await fetch(`https://digiteach.pythonanywhere.com/book_set/${bookData.id}/`, {
+                                    method: "DELETE",
+                                  });
+                                  if (!res.ok) throw new Error("Failed to delete book set");
+
+                                  await Swal.fire({
+                                    title: "Deleted!",
+                                    text: "book set deleted successfully.",
+                                    icon: "success",
+                                    confirmButtonColor: "#16a34a",
+                                  });
+                                  fetchBookSet();
+                                } catch (err) {
+                                  console.error(err);
+                                  Swal.fire({
+                                    icon: "error",
+                                    title: "Failed",
+                                    text: "Could not delete book set",
+                                    confirmButtonColor: "#dc2626",
+                                  });
+                                }
+                              }
+                            }}
+                          >
+                            <FaTrash />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
 
       </div>
     </div>

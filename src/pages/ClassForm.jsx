@@ -2,21 +2,18 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { showSuccess, showError } from "../utils/sweetAlertConfig";
 
-export default function BookForm({ onSuccess }) {
+export default function ClassForm({ onSuccess }) {
     const { id } = useParams();
     const navigate = useNavigate();
     const isEditMode = !!id;
     const schoolId = localStorage.getItem("schoolId");
 
     const [formData, setFormData] = useState({
-        // school_id: parseInt(schoolId),
-        book_title: "",
-        book_author: "",
-        book_publisher: "",
+        school_id: parseInt(schoolId),
+        board: "",
+        academic_year: "",
         class_name: "",
     });
-
-    const [classesList, setClassesList] = useState([]);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -24,37 +21,27 @@ export default function BookForm({ onSuccess }) {
     // Fetch job details if editing
     useEffect(() => {
         if (isEditMode && id) {
-            const fetchBook = async () => {
+            const fetchJob = async () => {
                 try {
-                    const response = await fetch(`https://digiteach.pythonanywhere.com/books/${id}/`);
-                    if (!response.ok) throw new Error("Failed to fetch job");
+                    const response = await fetch(`https://digiteach.pythonanywhere.com/classes/${id}/`);
+                    if (!response.ok) throw new Error("Failed to fetch class");
                     const result = await response.json();
                     if (result.data) {
-                        const bookData = result.data;
+                        const classData = result.data;
                         setFormData({
-                            book_title: bookData.book_title || "",
-                            book_author: bookData.book_author || "",
-                            book_publisher: bookData.book_publisher || "",
-                            class_name: bookData.class_name || "",
+                            school_id: classData.school_id || parseInt(schoolId),
+                            board: classData.board || "",
+                            academic_year: classData.academic_year || "",
+                            class_name: classData.class_name || "",
                         });
                     }
                 } catch (err) {
-                    console.error("Error fetching job:", err);
-                    setError("Failed to load job details");
+                    console.error("Error fetching class:", err);
+                    setError("Failed to load class details");
                 }
             };
-            fetchBook();
+            fetchJob();
         }
-        const fetchBook = async () => {
-            const classRes = await fetch(`https://digiteach.pythonanywhere.com/classes/`);
-            if (!classRes.ok) throw new Error("Failed to fetch class");
-            const classResult = await classRes.json();
-            if (classResult.data) {
-                const classData = classResult.data;
-                setClassesList(classData);
-            }
-        }
-        fetchBook()
     }, [id, isEditMode, schoolId]);
 
     const handleChange = (e) => {
@@ -73,9 +60,9 @@ export default function BookForm({ onSuccess }) {
         try {
             // Required fields validation
             const requiredFields = [
-                "book_title",
-                "book_author",
-                "book_publisher",
+                "school_id",
+                "board",
+                "academic_year",
                 "class_name",
 
             ];
@@ -85,26 +72,25 @@ export default function BookForm({ onSuccess }) {
             }
 
             // Prepare data
-            const bookData = {
-                // school_id: parseInt(formData.school_id),
-                book_title: formData.book_title,
-                book_author: formData.book_author,
-                book_publisher: formData.book_publisher,
+            const classData = {
+                school_id: parseInt(formData.school_id),
+                board: formData.board,
+                academic_year: formData.academic_year,
                 class_name: formData.class_name,
             };
 
-            console.log('Submitting job data:', bookData); // Debug log
+            console.log('Submitting class data:', classData); // Debug log
 
             const url = isEditMode
-                ? `https://digiteach.pythonanywhere.com/books/${id}/`
-                : "https://digiteach.pythonanywhere.com/books/";
+                ? `https://digiteach.pythonanywhere.com/classes/${id}/`
+                : "https://digiteach.pythonanywhere.com/classes/";
 
             const method = isEditMode ? "PATCH" : "POST";
 
             const response = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(bookData)
+                body: JSON.stringify(classData)
             });
 
             const responseData = await response.json();
@@ -113,19 +99,19 @@ export default function BookForm({ onSuccess }) {
                     responseData.detail ||
                     responseData.message ||
                     Object.values(responseData).flat().join("\n") ||
-                    "Failed to save job"
+                    "Failed to save class"
                 );
             }
 
             await showSuccess(
-                isEditMode ? 'Book Updated!' : 'Book Posted!',
-                isEditMode ? 'The Book has been updated successfully.' : 'The Book has been posted successfully.'
+                isEditMode ? 'Class Updated!' : 'Class Posted!',
+                isEditMode ? 'The Class has been updated successfully.' : 'The Class has been posted successfully.'
             );
             if (onSuccess) onSuccess();
-            navigate("/school-dashboard", { state: { activeTab: "Book Management" } });
+            navigate("/school-dashboard", { state: { activeTab: "Class Management" } });
         } catch (err) {
-            console.error("Error saving job:", err);
-            const errorMessage = err.message || "An error occurred while saving the job";
+            console.error("Error saving class:", err);
+            const errorMessage = err.message || "An error occurred while saving the class";
             setError(errorMessage);
             await showError('Error', errorMessage);
         } finally {
@@ -137,24 +123,24 @@ export default function BookForm({ onSuccess }) {
         <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-md p-6 my-8">
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">
-                    {isEditMode ? "Edit Book Posting" : "Post a New Book"}
+                    {isEditMode ? "Edit Class" : "Add a New Class"}
                 </h2>
                 <button type="button" onClick={() => navigate(-1)} className="text-gray-500 hover:text-gray-700">
-                    ← Back to Books List
+                    ← Back to Class List
                 </button>
             </div>
 
             {error && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">{error}</div>}
 
             <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
                     {/* Job Title */}
                     <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">Book Title <span className="text-red-600">*</span></label>
+                        <label className="block text-sm font-medium text-gray-700">Board <span className="text-red-600">*</span></label>
                         <input
                             type="text"
-                            name="book_title"
-                            value={formData.book_title}
+                            name="board"
+                            value={formData.board}
                             onChange={handleChange}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             required
@@ -163,11 +149,11 @@ export default function BookForm({ onSuccess }) {
 
                     {/* Job Type */}
                     <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">Author <span className="text-red-600">*</span></label>
+                        <label className="block text-sm font-medium text-gray-700">Academic Year <span className="text-red-600">*</span></label>
                         <input
                             type="text"
-                            name="book_author"
-                            value={formData.book_author}
+                            name="academic_year"
+                            value={formData.academic_year}
                             onChange={handleChange}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             required
@@ -175,17 +161,57 @@ export default function BookForm({ onSuccess }) {
                     </div>
 
                     {/* Subject */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">Publisher <span className="text-red-600">*</span></label>
+                    {/* <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">Class <span className="text-red-600">*</span></label>
                         <input
                             type="text"
-                            name="book_publisher"
-                            value={formData.book_publisher}
+                            name="class_name"
+                            value={formData.class_name}
                             onChange={handleChange}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             required
                         />
+                    </div> */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">Class <span className="text-red-600">*</span></label>
+                        <select
+                            name="class_name"
+                            value={formData.class_name || ''}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                setFormData(prev => ({
+                                    ...prev,
+                                    class_name: value ? value : []
+                                }));
+                            }}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            required
+                        >
+                            {
+                                ["preschool", "nursery", "JKG", "SKG", "class 1", "class 2", "class 3", "class 4", "class 5", "class 6", "class 7", "class 8", "class 9", "class 10", "class 11", "class 12"].map((cla) => (
+                                    <option key={cla} value={cla.includes("class") ? cla.slice(6) : cla.slice(0)}>{cla.charAt(0).toUpperCase() + cla.slice(1)}</option>
+                                ))
+                            }
+
+                        </select>
                     </div>
+
+                    {/* <div className="flex flex-wrap gap-10">
+                        {
+                            ["preschool", "nursery", "JKG", "SKG", "class 1", "class 2", "class 3", "class 4", "class 5", "class 6", "class 7", "class 8", "class 9", "class 10", "class 11", "class 12"].map((cla) => (
+                                <div key={cla} className="flex items-center space-x-2">
+                                    <input
+                                        type="checkbox"
+                                        name="class_name"
+                                        value={cla}
+                                        onChange={handleChange}
+                                        className="h-4 w-4 text-blue-600 cursor-pointer focus:ring-blue-500 border-gray-300 rounded"
+                                    />
+                                    <label className="text-sm text-gray-700">{cla}</label>
+                                </div>
+                            ))
+                        }
+                    </div> */}
 
                     {/* Experience */}
                     {/* <div className="space-y-2">
@@ -214,8 +240,8 @@ export default function BookForm({ onSuccess }) {
                         />
                     </div> */}
 
-                    {/* Class */}
-                    <div className="space-y-2">
+                    {/* class */}
+                    {/* <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700">Class <span className="text-red-600">*</span></label>
                         <select
                             name="class_name"
@@ -231,12 +257,7 @@ export default function BookForm({ onSuccess }) {
                             required
                         >
                             <option value="">Select Class</option>
-                            {
-                                classesList.map((cls) => (
-                                    <option key={cls.id} value={cls.class_name}>{cls.class_name}</option>
-                                ))
-                            }
-                            {/* <option value="preschool">Preschool</option>
+                            <option value="preschool">Preschool</option>
                             <option value="nursery">Nursery</option>
                             <option value="JKG">JKG</option>
                             <option value="SKG">SKG</option>
@@ -251,13 +272,9 @@ export default function BookForm({ onSuccess }) {
                             <option value="9">9</option>
                             <option value="10">10</option>
                             <option value="11">11</option>
-                            <option value="12">12</option> */}
-                            {/* <option value="₹75,000 - ₹1,00,000">₹75,000 - ₹1,00,000</option>
-              <option value="₹1,00,000 - ₹1,50,000">₹1,00,000 - ₹1,50,000</option>
-              <option value="Above ₹1,50,000">Above ₹1,50,000</option>
-              <option value="Negotiable">Negotiable</option> */}
+                            <option value="12">12</option>
                         </select>
-                    </div>
+                    </div> */}
 
                     {/* Last Date to Apply */}
                     {/* <div className="space-y-2">

@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import { FaSchool, FaBook, FaClipboardList, FaUser, FaTasks } from "react-icons/fa";
+import { FaSchool, FaBook, FaClipboardList, FaUser, FaTasks, FaStore } from "react-icons/fa";
+import { useNavigate } from "react-router";
 
 export default function AdminDashboard({ setIsAdmin }) {
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSchool, setSelectedSchool] = useState(null); // for modal
-
+  const [selectedSchool, setSelectedSchool] = useState(null);
+  const [selectedVendor, setSelectedVendor] = useState(null);
+  const [vendors, setVendors] = useState([]);
+  const navigate = useNavigate();
   // Fetch schools
   const fetchSchools = async () => {
     setLoading(true);
@@ -25,9 +28,53 @@ export default function AdminDashboard({ setIsAdmin }) {
     }
   };
 
+  const fetchVendors = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("https://digiteach.pythonanywhere.com/vendor/");
+      const result = await res.json();
+      console.log("Vendor fetch result:", result);
+      if (Array.isArray(result)) {
+        setVendors(result);
+      } else {
+        setVendors([]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch vendors:", err);
+      setVendors([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchSchools();
+    fetchVendors()
   }, []);
+
+  const handleStatusVendorChange = async (id, status) => {
+    try {
+      const res = await fetch(
+        `https://digiteach.pythonanywhere.com/vendor/${id}/`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ approve_status: status }),
+        }
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Backend response:", text);
+        throw new Error("Failed to update status");
+      }
+      fetchVendors();
+      setSelectedVendor(null); // close modal if open
+    }
+    catch (err) {
+      alert(err.message);
+    }
+  };
 
   // Accept / Reject school
   const handleStatusChange = async (id, status) => {
@@ -79,6 +126,9 @@ export default function AdminDashboard({ setIsAdmin }) {
           </button>
           <button className="flex items-center gap-3 px-4 py-2 hover:bg-blue-600 rounded-lg">
             <FaSchool /> Orders
+          </button>
+          <button className="flex items-center gap-3 px-4 py-2 hover:bg-blue-600 rounded-lg">
+            <FaStore /> Vendor
           </button>
           <button className="flex items-center gap-3 px-4 py-2 hover:bg-blue-600 rounded-lg">
             <FaUser /> Profile
@@ -206,7 +256,7 @@ export default function AdminDashboard({ setIsAdmin }) {
               <p><strong>Contact Person:</strong> {selectedSchool.contact_person_name}</p>
               <p><strong>Contact Number:</strong> {selectedSchool.contact_number}</p>
               <p><strong>Designation:</strong> {selectedSchool.designation_data?.name}</p>
-               <p><strong>City:</strong> {selectedSchool.city}</p>
+              <p><strong>City:</strong> {selectedSchool.city}</p>
               <p><strong>District:</strong> {selectedSchool.district}</p>
               <p><strong>Address Line 1:</strong> {selectedSchool.address_line_1}</p>
               <p><strong>Address Line 2:</strong> {selectedSchool.address_line_2}</p>
@@ -236,6 +286,73 @@ export default function AdminDashboard({ setIsAdmin }) {
           </div>
         </div>
       )}
+{/* 
+      <div className="p-6">
+        {loading ? (
+          <p>Loading Vendor...</p>
+        ) : vendors.length === 0 ? (
+          <p>No vendor found</p>
+        ) : (
+          <div className="overflow-x-auto bg-white rounded shadow">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">ID</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Vendor Name</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Vendor Mobile</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Vendor Email</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">City</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Status</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {vendors.map((vendor) => (
+                  <tr key={vendor.id}>
+                    <td className="px-4 py-2 text-sm">{vendor.id}</td>
+                    <td className="px-4 py-2 text-sm">{vendor.vendor_name}</td>
+                    <td className="px-4 py-2 text-sm">{vendor.vendor_mobile}</td>
+                    <td className="px-4 py-2 text-sm">{vendor.vendor_email}</td>
+                    <td className="px-4 py-2 text-sm">{vendor.city}</td>
+                    <td className="px-4 py-2 text-sm">
+                      <span className={vendor.approve_status == "Not Approved" && "text-red-600" ||
+                        vendor.approve_status == "Approved" && "text-green-600" ||
+                        vendor.approve_status == "Rejected" && "text-red-600" ||
+                        vendor.approve_status == "Pending" && "text-yellow-600"
+                      }>
+                        {vendor.approve_status == "Not Approved" && "Inactive"}
+                        {vendor.approve_status == "Approved" && "Active"}
+                        {vendor.approve_status == "Rejected" && "Rejected"}
+                        {vendor.approve_status == "Pending" && "Pending"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-sm flex gap-2">
+                      <button
+                        onClick={() => setSelectedSchool(vendor)}
+                        className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleStatusVendorChange(vendor.id, "Approved")}
+                        className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleStatusVendorChange(vendor.id, false)}
+                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                      >
+                        Reject
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div> */}
     </div>
   );
 }

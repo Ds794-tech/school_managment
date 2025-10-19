@@ -2,42 +2,20 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-export default function VendorLogin({ setIsSchool }) {
+export default function VendorLogin({ setIsVendor }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState(""); // contact_number
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    try {
-      // Fetch all schools
-      const res = await axios.get("https://digiteach.pythonanywhere.com/school/");
-      const result = res.data;
-      const schools = Array.isArray(result.data) ? result.data : result;
-
-      // Find the school with matching email and contact_number
-      const school = schools.find(
-        (s) => s.school_email === email && s.contact_number.toString() === password
-      );
-
-      if (school) {
-        if (!school.is_active) {
-          alert("Your account is not active. Please wait for Admin approval.");
-          return;
-        }
-
-        // Save login info
-        localStorage.setItem("isSchool", "true");
-        localStorage.setItem("schoolId", school.id);
-        setIsSchool(true);
-
-        navigate("/school-dashboard");
-      } else {
-        alert("Invalid credentials");
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      alert("Error logging in");
+ 
+   if (email === "vendor@gmail.com" && password === "vendor123") {
+      setIsVendor(true);
+      localStorage.setItem("isVendor", "true");
+      navigate("/vendor-dashboard");
+    } else {
+      alert("Invalid admin credentials");
     }
   };
 
@@ -47,10 +25,10 @@ export default function VendorLogin({ setIsSchool }) {
         onSubmit={handleLogin}
         className="w-full max-w-md bg-white p-8 rounded-lg shadow-lg space-y-4"
       >
-        <h2 className="text-2xl font-bold mb-4 text-center">School Login</h2>
+        <h2 className="text-2xl font-bold mb-4 text-center">Vendor Login</h2>
         <input
           type="email"
-          placeholder="School Email"
+          placeholder="Vendor Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="w-full p-3 border rounded-lg"
