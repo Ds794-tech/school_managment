@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaSchool, FaBook, FaClipboardList, FaUser, FaTasks, FaTachometerAlt } from "react-icons/fa";
+import { FaSchool, FaBook, FaClipboardList, FaUser, FaTasks, FaTachometerAlt, FaEdit, FaTrash } from "react-icons/fa";
 
 export default function VendorDashboard({ setIsVendor }) {
   const [schools, setSchools] = useState([]);
@@ -7,21 +7,25 @@ export default function VendorDashboard({ setIsVendor }) {
   const [vendors, setVendors] = useState(null);
   const [selectedVendors, setSelectedVendors] = useState(null);
   const [activeTab, setActiveTab] = useState("Dashboard");
+  const [bookSet, setBookSet] = useState([]);
 
   // Fetch schools
   const fetchVendors = async () => {
     setLoading(true);
     try {
-      const res = await fetch("https://digiteach.pythonanywhere.com/vendor/");
+      const res = await fetch("https://digiteach.pythonanywhere.com/book_set/");
+      if (!res.ok) throw new Error("Failed to fetch schools");
       const result = await res.json();
-      if (Array.isArray(result)) {
-        setVendors(result);
-      } else {
-        setVendors([]);
-      }
+      // const currentSchool = result.data.find(
+      //   (s) => s.id.toString() === schoolId
+      // );
+      console.log(result.data);
+      setBookSet(result.data || []);
+      setLoading(false)
     } catch (err) {
-      console.error("Failed to fetch schools:", err);
-      setVendors([]);
+      console.error(err);
+      setBookSet([]);
+      setLoading(false)
     } finally {
       setLoading(false);
     }
@@ -30,30 +34,6 @@ export default function VendorDashboard({ setIsVendor }) {
   useEffect(() => {
     fetchVendors();
   }, []);
-
-  // Accept / Reject school
-  const handleStatusChange = async (id, status) => {
-    try {
-      const res = await fetch(
-        `https://digiteach.pythonanywhere.com/vendor/${id}/`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ is_active: status }),
-        }
-      );
-
-      if (!res.ok) {
-        const text = await res.text();
-        console.error("Backend response:", text);
-        throw new Error("Failed to update status");
-      }
-      fetchVendors();
-      setSelectedVendors(null); // close modal if open
-    } catch (err) {
-      alert(err.message);
-    }
-  };
 
   // Logout
   const handleLogout = () => {
@@ -139,82 +119,156 @@ export default function VendorDashboard({ setIsVendor }) {
             <h2 className="text-2xl font-bold">5</h2>
           </div>
         </div> */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 className="text-2xl md:text-2xl px-6 pt-5 font-bold text-gray-800">Posted Vendor List</h2>
+        {/* <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h2 className="text-2xl md:text-2xl px-6 pt-5 font-bold text-gray-800">Posted Book Set List</h2> */}
           {/* <button
             onClick={() => navigate("/job-form")}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2"
           >
             <FaEdit /> Post New Job
           </button> */}
-        </div>
+        {/* </div> */}
 
         {/* Schools Table (your actual data) */}
-        <div className="p-6">
-          {loading ? (
-            <p>Loading Vendor...</p>
-          ) : vendors.length === 0 ? (
-            <p>No Vendor found</p>
-          ) : (
-            <div className="overflow-x-auto bg-white rounded shadow">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">ID</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Company Logo</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Vendor Name</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Mobile No</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Vendor Email</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Website</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">City</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Status</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="">
-                  {vendors.map((vendor) => (
-                    <tr key={vendor.id}>
-                      <td className="px-4 py-5 text-sm">{vendor.id}</td>
-                      <td className="px-4 py-5 text-sm"><img className="w-28 h-20" src={`https://digiteach.pythonanywhere.com/${vendor.companey_logo}`} alt="vendorImage" /></td>
-                      <td className="px-4 py-5 text-sm">{vendor.vendor_name}</td>
-                      <td className="px-4 py-5 text-sm">{vendor.vendor_mobile}</td>
-                      <td className="px-4 py-5 text-sm">{vendor.vendor_email}</td>
-                      <td className="px-4 py-5 text-sm">{vendor.vendor_website}</td>
-                      <td className="px-4 py-5 text-sm">{vendor.city}</td>
-                      <td className="px-4 py-5 text-sm">
-                        <span className={vendor.approve_status === "Approved" ? "text-green-600" : vendor.approve_status === "Not Approved" ? "text-red-600" : "text-yellow-600"}>
-                          {vendor.approve_status === "Not Approved" && "Rejected"}
-                          {vendor.approve_status === "Approved" && "Accepted"}
-                          {vendor.approve_status === "Pending" && "Pending"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-12 text-sm flex gap-2">
-                        <button
-                          onClick={() => setSelectedVendors(vendor)}
-                          className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
-                        >
-                          View
-                        </button>
-                        <button
-                          onClick={() => handleStatusChange(vendor.id, "Approved")}
-                          className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
-                        >
-                          Verify
-                        </button>
-                        <button
-                          onClick={() => handleStatusChange(vendor.id, "Not Approved")}
-                          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                        >
-                          Reject
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      {/* {activeTab === "Book Set" && ( */}
+                <div className="space-y-6">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-5 pt-5">
+                    <h2 className="text-2xl md:text-2xl font-bold text-gray-800">Posted Book Set List</h2>
+                    {/* <button
+                      onClick={() => navigate("/book-set-form")}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2"
+                    >
+                      <FaEdit /> Create Book Set
+                    </button> */}
+                  </div>
+      
+                  {loading ? (
+                    <p>Loading BooK Set...</p>
+                  ) : bookSet.length === 0 ? (
+                    <div className="bg-white rounded-xl shadow p-6 text-center">
+                      <p className="text-gray-500 mb-4">No Book Set posted yet</p>
+                      {/* <button
+                        onClick={() => navigate("/job-form")}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                      >
+                        Post Your First Book
+                      </button> */}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto px-5">
+                      <table className="min-w-full bg-white border rounded-lg text-sm md:text-base">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            {["Book Set ID", "Class ID", "Academy Year"
+                            //  "Actions"
+                            ].map((h) => (
+                              <th key={h} className="text-left px-4 py-2">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bookSet.map((bookSetData) => (
+                            <tr key={bookSetData.id} className="border-b hover:bg-gray-50">
+                              <td className="px-4 py-2">{bookSetData.id}</td>
+                              <td className="px-4 py-2">{bookSetData.class_detail_id}</td>
+                              <td className="px-4 py-2">{bookSetData.academic_year}</td>
+                              {/* <td className="px-4 py-2">{bookData.class_name}</td> */}
+                              {/* <td className="px-4 py-2">{bookData.class_name}</td> */}
+                              {/* <td className="px-4 py-2">{bookData.job_type}</td> */}
+                              {/* <td className="px-4 py-2">
+                                <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${job.status === "Open" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                                  {job.status}
+                                </span>
+                              </td> */}
+                              {/* <td className="px-4 py-2">{new Date(job.posted_date).toLocaleDateString()}</td> */}
+      
+                              {/* Applicants */}
+                              {/* <td className="px-4 py-2">
+                                {job.job_applicant_count > 0 ? (
+                                  <button
+                                    className="text-blue-600 hover:underline"
+                                    onClick={() => {
+                                      setSelectedJob(job);
+                                      setShowApplicants(true);
+                                    }}
+                                  >
+                                    {job.job_applicant_count} applicant{job.job_applicant_count !== 1 ? "s" : ""}
+                                  </button>
+                                ) : (
+                                  <span className="text-gray-400">No applicants</span>
+                                )}
+                              </td> */}
+      
+                              {/* Actions */}
+                              {/* <td className="px-4 py-2 flex justify-start gap-3"> */}
+                                {/* <button
+                                  className="text-blue-600 hover:text-blue-800 text-lg"
+                                  onClick={() => {
+                                    setSelectBook(bookData);
+                                    setShowBookDetails(true);
+                                  }}
+                                >
+                                  <FaEye />
+                                </button> */}
+                                {/* <button
+                                  className="text-yellow-600 hover:text-yellow-800 text-lg"
+                                  onClick={() => navigate(`/book-set-form/${bookSetData.id}`, { onSuccess: fetchVendors })}
+                                >
+                                  <FaEdit />
+                                </button> */}
+                                {/* <button
+                                  className="text-red-600 hover:text-red-800 text-lg"
+                                  onClick={async () => {
+                                    const result = await Swal.fire({
+                                      title: "Are you sure?",
+                                      text: "Do you want to delete this book set?",
+                                      icon: "warning",
+                                      showCancelButton: true,
+                                      confirmButtonColor: "#dc2626",
+                                      cancelButtonColor: "#6b7280",
+                                      confirmButtonText: "Yes, delete it!",
+                                      cancelButtonText: "Cancel",
+                                      reverseButtons: true,
+                                      position: "center",
+                                    });
+      
+                                    if (result.isConfirmed) {
+                                      try {
+                                        const res = await fetch(`https://digiteach.pythonanywhere.com/book_set/${bookSetData.id}/`, {
+                                          method: "DELETE",
+                                        });
+                                        if (!res.ok) throw new Error("Failed to delete book set");
+      
+                                        await Swal.fire({
+                                          title: "Deleted!",
+                                          text: "book set deleted successfully.",
+                                          icon: "success",
+                                          confirmButtonColor: "#16a34a",
+                                        });
+                                        fetchVendors();
+                                      } catch (err) {
+                                        console.error(err);
+                                        Swal.fire({
+                                          icon: "error",
+                                          title: "Failed",
+                                          text: "Could not delete book set",
+                                          confirmButtonColor: "#dc2626",
+                                        });
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <FaTrash />
+                                </button> */}
+                              {/* </td> */}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              {/* // )} */}
       </div>
 
       {/* Modal for School Details */}

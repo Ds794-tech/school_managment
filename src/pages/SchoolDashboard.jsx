@@ -637,6 +637,8 @@ import {
 import { FaBookBookmark } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
+import AddBoardModal from "../component/AddEditBoardModel";
+import AddEditBoardModal from "../component/AddEditBoardModel";
 
 export default function SchoolDashboard({ setIsSchool }) {
   const [school, setSchool] = useState(null);
@@ -648,6 +650,8 @@ export default function SchoolDashboard({ setIsSchool }) {
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [isLoadingBooks, setIsLoadingBooks] = useState(false);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
+  const [isLoadingSchoolDetail, setIsLoadingSchoolDetail] = useState(false);
+  const [editBoard, setEditBoard] = useState(null);
 
   const [book, setBooks] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -658,8 +662,10 @@ export default function SchoolDashboard({ setIsSchool }) {
   const [selectedBook, setSelectBook] = useState(null);
   const [showBookDetails, setShowBookDetails] = useState(false);
   const [bookSet, setBookSet] = useState([]);
-  const [filterYear, setFilterYear] = useState(null);
+  const [filterYear, setFilterYear] = useState('');
   const [filteredClasses, setFilteredClasses] = useState([]);
+  const [schoolDetail, setSchoolDetail] = useState([]);
+  const [showModal, setShowModal] = useState(false);
   // const [selectedClass, setSelectBook] = useState(null);
   // const [selectedBook, setSelectBook] = useState(null);
 
@@ -703,6 +709,27 @@ export default function SchoolDashboard({ setIsSchool }) {
       setIsLoadingBooks(false)
     } finally {
       setIsLoadingBooks(false);
+    }
+  };
+
+  const fetchSchoolDetailProfile = async () => {
+    setIsLoadingSchoolDetail(true);
+    try {
+      const res = await fetch("https://digiteach.pythonanywhere.com/school_board_detail/");
+      if (!res.ok) throw new Error("Failed to fetch schools");
+      const result = await res.json();
+      // const currentSchool = result.data.find(
+      //   (s) => s.id.toString() === schoolId
+      // );
+      console.log(result.data);
+      setSchoolDetail(result.data || []);
+      setIsLoadingSchoolDetail(false)
+    } catch (err) {
+      console.error(err);
+      setSchoolDetail([]);
+      setIsLoadingSchoolDetail(false)
+    } finally {
+      setIsLoadingSchoolDetail(false);
     }
   };
 
@@ -798,6 +825,7 @@ export default function SchoolDashboard({ setIsSchool }) {
   useEffect(() => {
     if (schoolId) {
       fetchSchoolProfile();
+      fetchSchoolDetailProfile();
       if (activeTab === "Jobs") fetchJobs();
       if (activeTab === "Book Management") fetchBooks();
       if (activeTab === "Class Management") fetchClasses();
@@ -881,6 +909,29 @@ export default function SchoolDashboard({ setIsSchool }) {
     } catch (error) {
       console.error("Failed to update applicant:", error);
     }
+  };
+
+  const handleSaveData = (data) => {
+    if (editBoard) {
+      // Update existing board
+      setBoards((prev) =>
+        prev.map((b) => (b.id === editBoard.id ? { ...b, ...data } : b))
+      );
+    } else {
+      // Add new board
+      setBoards((prev) => [...prev, { id: Date.now(), ...data }]);
+    }
+    setShowModal(false);
+    setEditBoard(null);
+  };
+
+  const handleEdit = (board) => {
+    setEditBoard(board);
+    setShowModal(true);
+  };
+
+  const handleDelete = (id) => {
+    setBoards((prev) => prev.filter((b) => b.id !== id));
   };
 
   return (
@@ -972,60 +1023,150 @@ export default function SchoolDashboard({ setIsSchool }) {
 
         {/* Profile Tab */}
         {activeTab === "Profile" && (
-          <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
-            {loading || !school ? <p>Loading profile...</p> : (
-              <>
-                <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6">
-                  <img
-                    src="https://i.pravatar.cc/100"
-                    alt="profile"
-                    className="w-24 h-24 rounded-full border-4 border-blue-500 shadow-md"
-                  />
-                  <div className="flex-1">
-                    <p className="text-2xl font-bold text-gray-800">{school.contact_person_name}</p>
-                    <p className="text-gray-500">{school.school_email}</p>
+          <>
+            <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
+              {loading || !school ? <p>Loading profile...</p> : (
+                <>
+                  <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6">
+                    <img
+                      src="https://i.pravatar.cc/100"
+                      alt="profile"
+                      className="w-24 h-24 rounded-full border-4 border-blue-500 shadow-md"
+                    />
+                    <div className="flex-1">
+                      <p className="text-2xl font-bold text-gray-800">{school.contact_person_name}</p>
+                      <p className="text-gray-500">{school.school_email}</p>
+                    </div>
+                    <button
+                      onClick={toggleEdit}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      <FaEdit /> {isEditing ? "Cancel" : "Edit"}
+                    </button>
                   </div>
-                  <button
-                    onClick={toggleEdit}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 flex items-center gap-2"
-                  >
-                    <FaEdit /> {isEditing ? "Cancel" : "Edit"}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {["school_name", "school_email", "contact_person_name", "contact_number", "designation_data", "address_line_1", "address_line_2", "city", "district", "landmark"].map((field) => (
+                      <div key={field} className="bg-gray-50 p-4 rounded-xl shadow hover:shadow-md transition">
+                        <p className="text-gray-500 text-sm">{field.replace("_", " ").toUpperCase()}</p>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            name={field}
+                            value={field === "designation_data" ? editData.designation_data?.name || "" : editData[field] || ""}
+                            onChange={handleChange}
+                            className="mt-1 p-2 w-full border rounded"
+                          />
+                        ) : (
+                          <p className="font-semibold text-lg">{field === "designation_data" ? school.designation_data?.name : school[field]}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {isEditing && (
+                    <div className="mt-4">
+                      <button
+                        onClick={handleSave}
+                        className="bg-green-600 text-white px-6 py-2 rounded-xl hover:bg-green-700 transition"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div>
+              <div className="pt-10 bg-gray-50">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    School Board Details
+                  </h2>
+                  <button onClick={() => setShowModal(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">
+                    <span>+ Add New Board</span>
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {["school_name", "school_email", "contact_person_name", "contact_number", "designation_data", "address_line_1", "address_line_2", "city", "district", "landmark"].map((field) => (
-                    <div key={field} className="bg-gray-50 p-4 rounded-xl shadow hover:shadow-md transition">
-                      <p className="text-gray-500 text-sm">{field.replace("_", " ").toUpperCase()}</p>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          name={field}
-                          value={field === "designation_data" ? editData.designation_data?.name || "" : editData[field] || ""}
-                          onChange={handleChange}
-                          className="mt-1 p-2 w-full border rounded"
-                        />
-                      ) : (
-                        <p className="font-semibold text-lg">{field === "designation_data" ? school.designation_data?.name : school[field]}</p>
-                      )}
+                {schoolDetail.map((board, index) => (
+                  <div
+                    key={board.id}
+                    className="bg-white border border-gray-200 rounded-lg shadow-sm p-5 mb-5"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-lg font-semibold text-gray-700">
+                        Board #{index + 1}: {board.board}
+                      </h3>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleEdit(board)} className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-sm transition">
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(board.id)}
+                          className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm transition"
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
                     </div>
-                  ))}
-                </div>
 
-                {isEditing && (
-                  <div className="mt-4">
-                    <button
-                      onClick={handleSave}
-                      className="bg-green-600 text-white px-6 py-2 rounded-xl hover:bg-green-700 transition"
-                    >
-                      Save Changes
-                    </button>
+                    <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-4">
+                      <div className="bg-gray-50 border rounded-md p-3">
+                        <p className="text-sm text-gray-500">Board</p>
+                        <p className="font-semibold text-gray-800">{board.board}</p>
+                      </div>
+
+                      <div className="bg-gray-50 border rounded-md p-3">
+                        <p className="text-sm text-gray-500">Register Number</p>
+                        <p className="font-semibold text-gray-800">
+                          {board.register_number}
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-50 border rounded-md p-3">
+                        <p className="text-sm text-gray-500">UDISE Code</p>
+                        <p className="font-semibold text-gray-800">{board.udisc_code}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-500 mb-2">Classes Offered</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(board).filter(([key, value]) => key.startsWith("class_") && value === "yes")
+                          .map(([key]) => key.replace("class_", "Class ")).length > 0 ? (
+                          Object.entries(board)
+                            .filter(([key, value]) => key.startsWith("class_") && value === "yes")
+                            .map(([key]) => (
+                              <span
+                                key={key}
+                                className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                              >
+                                {key.replace("class_", "Class ")}
+                              </span>
+                            ))
+                        ) : (
+                          <p className="text-gray-400">No classes offered</p>
+                        )
+                        }
+                      </div>
+                    </div>
                   </div>
-                )}
-              </>
+                ))}
+              </div>
+            </div>
+            {showModal && (
+              <AddEditBoardModal
+                onClose={() => {
+                  setShowModal(false);
+                  setEditBoard(null);
+                }}
+                onSave={handleSave}
+                editData={editBoard}
+              />
             )}
-          </div>
+          </>
         )}
+
 
         {/* Jobs Tab */}
         {activeTab === "Jobs" && (
@@ -1558,7 +1699,7 @@ export default function SchoolDashboard({ setIsSchool }) {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <h2 className="text-2xl md:text-2xl font-bold text-gray-800">Posted Book Set List</h2>
               <button
-                onClick={() => navigate("/bookset-form")}
+                onClick={() => navigate("/book-set-form")}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2"
               >
                 <FaEdit /> Create Book Set
@@ -1588,11 +1729,11 @@ export default function SchoolDashboard({ setIsSchool }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {bookSet.map((bookData) => (
-                      <tr key={bookData.id} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-2">{bookData.id}</td>
-                        <td className="px-4 py-2">{bookData.class_detail_id}</td>
-                        <td className="px-4 py-2">{bookData.academic_year}</td>
+                    {bookSet.map((bookSetData) => (
+                      <tr key={bookSetData.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-2">{bookSetData.id}</td>
+                        <td className="px-4 py-2">{bookSetData.class_detail_id}</td>
+                        <td className="px-4 py-2">{bookSetData.academic_year}</td>
                         {/* <td className="px-4 py-2">{bookData.class_name}</td> */}
                         {/* <td className="px-4 py-2">{bookData.class_name}</td> */}
                         {/* <td className="px-4 py-2">{bookData.job_type}</td> */}
@@ -1633,7 +1774,7 @@ export default function SchoolDashboard({ setIsSchool }) {
                           </button> */}
                           <button
                             className="text-yellow-600 hover:text-yellow-800 text-lg"
-                            onClick={() => navigate(`/bookset-form/${bookData.id}`, { onSuccess: fetchBookSet })}
+                            onClick={() => navigate(`/book-set-form/${bookSetData.id}`, { onSuccess: fetchBookSet })}
                           >
                             <FaEdit />
                           </button>
@@ -1655,7 +1796,7 @@ export default function SchoolDashboard({ setIsSchool }) {
 
                               if (result.isConfirmed) {
                                 try {
-                                  const res = await fetch(`https://digiteach.pythonanywhere.com/book_set/${bookData.id}/`, {
+                                  const res = await fetch(`https://digiteach.pythonanywhere.com/book_set/${bookSetData.id}/`, {
                                     method: "DELETE",
                                   });
                                   if (!res.ok) throw new Error("Failed to delete book set");
