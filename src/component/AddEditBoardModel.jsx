@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { showError, showSuccess } from "../utils/sweetAlertConfig";
 
-export default function AddEditBoardModal({ onClose, onSave, editData }) {
+export default function AddEditBoardModal({ onClose, editData, fetchSchoolDetailProfile }) {
     const [formData, setFormData] = useState({
         board: "",
         register_number: "",
@@ -19,32 +20,108 @@ export default function AddEditBoardModal({ onClose, onSave, editData }) {
         ...Array.from({ length: 12 }, (_, i) => `Class ${i + 1}`),
     ];
 
-    useEffect(() => {
-        if (editData) {
-            setFormData(editData);
-        }
-    }, [editData]);
+    const schoolId = localStorage.getItem("schoolId");
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
     const handleCheckbox = (cls) => {
-        const key = cls
-            .toLowerCase()
-            .replace("class ", "class_")
-            .replace("junior kg", "JKG")
-            .replace("senior kg", "SKG");
-
+        const key = cls.toLowerCase()
         setFormData((prev) => ({
             ...prev,
             [key]: prev[key] === "yes" ? "no" : "yes",
         }));
     };
 
-    const handleSubmit = (e) => {
+    console.log("Edit Data:", formData);
+
+    useEffect(() => {
+        if (editData && editData.id) {
+            const fetchBoard = async () => {
+                try {
+                    const response = await fetch(`https://digiteach.pythonanywhere.com/school_board_detail/${editData.id}/`);
+                    if (!response.ok) throw new Error("Failed to fetch board");
+                    const result = await response.json();
+                    if (result.data) {
+                        const boardData = result.data;
+                        setFormData(boardData);
+                    }
+                } catch (err) {
+                    console.error("Error fetching job:", err);
+                    setError("Failed to load job details");
+                }
+            };
+            fetchBoard();
+        }
+    }, [editData.id]);
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onSave(formData);
+        // setLoading(true);
+        // setError("");
+
+        try {
+            // Required fields validation
+
+            const requiredFields = [
+                "board",
+                "register_number",
+                "udisc_code",
+            ];
+
+            const missingFields = requiredFields.filter((field) => !formData[field]);
+            if (missingFields.length > 0) {
+                throw new Error(`Please fill in all required fields: ${missingFields.join(", ")}`);
+            }
+
+            // Prepare data
+            const boardData = {
+                school_id: parseInt(schoolId),
+                board: formData.board,
+                register_number: formData.register_number,
+                udisc_code: formData.udisc_code,
+            };
+
+
+            const url = editData && editData.id
+                ? `https://digiteach.pythonanywhere.com/school_board_detail/${editData.id}/`
+                : "https://digiteach.pythonanywhere.com/school_board_detail/";
+
+            const method = editData && editData.id ? "PATCH" : "POST";
+
+            const response = await fetch(url, {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(boardData)
+            });
+
+            const responseData = await response.json();
+            if (!response.ok) {
+                throw new Error(
+                    responseData.detail ||
+                    responseData.message ||
+                    Object.values(responseData).flat().join("\n") ||
+                    "Failed to save job"
+                );
+            }
+
+            await showSuccess(
+                editData && editData.id ? 'Book Updated!' : 'Book Posted!',
+                editData && editData.id ? 'The Book has been updated successfully.' : 'The Book has been posted successfully.'
+            );
+            fetchSchoolDetailProfile();
+            onClose();
+            // if (onSuccess) onSuccess();
+            // navigate("/school-dashboard", { state: { activeTab: "Book Management" } });
+        } catch (err) {
+            console.error("Error saving job:", err);
+            const errorMessage = err.message || "An error occurred while saving the job";
+            // setError(errorMessage);
+            await showError('Error', errorMessage);
+        } finally {
+            // setLoading(false);
+        }
     };
 
     return (
@@ -60,7 +137,7 @@ export default function AddEditBoardModal({ onClose, onSave, editData }) {
 
                 {/* Header */}
                 <h2 className="text-xl font-semibold text-gray-800 mb-5">
-                    {editData ? "Edit Board Details" : "Add New Board Details"}
+                    {editData && editData.id ? "Edit Board Details" : "Add New Board Details"}
                 </h2>
 
                 <form onSubmit={handleSubmit}>
@@ -100,7 +177,7 @@ export default function AddEditBoardModal({ onClose, onSave, editData }) {
                             </label>
                             <input
                                 type="text"
-                                name="udisecode"
+                                name="udisc_code"
                                 value={formData.udisc_code}
                                 onChange={handleChange}
                                 className="w-full mt-1 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -115,12 +192,7 @@ export default function AddEditBoardModal({ onClose, onSave, editData }) {
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
                             {classOptions.map((cls) => {
-                                const key = cls
-                                    .toLowerCase()
-                                    .replace("class ", "class_")
-                                    .replace("preschool", "preschool")
-                                    .replace("nursery", "nursery");
-
+                                const key = cls.toLowerCase().replace("class ", "class_")
                                 return (
                                     <label
                                         key={cls}
@@ -128,6 +200,8 @@ export default function AddEditBoardModal({ onClose, onSave, editData }) {
                                     >
                                         <input
                                             type="checkbox"
+                                            name={key}
+                                            value={formData[key]}
                                             checked={formData[key] === "yes"}
                                             onChange={() => handleCheckbox(cls)}
                                             className="h-4 w-4 border-gray-300"

@@ -634,6 +634,9 @@ import {
   FaBook,
   FaSchool
 } from "react-icons/fa";
+// import { marked } from "marked";
+// import ReactMarkdown from "react-markdown";
+import parse from "html-react-parser";
 import { FaBookBookmark } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
@@ -911,28 +914,53 @@ export default function SchoolDashboard({ setIsSchool }) {
     }
   };
 
-  const handleSaveData = (data) => {
-    if (editBoard) {
-      // Update existing board
-      setBoards((prev) =>
-        prev.map((b) => (b.id === editBoard.id ? { ...b, ...data } : b))
-      );
-    } else {
-      // Add new board
-      setBoards((prev) => [...prev, { id: Date.now(), ...data }]);
-    }
-    setShowModal(false);
-    setEditBoard(null);
-  };
-
   const handleEdit = (board) => {
     setEditBoard(board);
     setShowModal(true);
   };
 
-  const handleDelete = (id) => {
-    setBoards((prev) => prev.filter((b) => b.id !== id));
-  };
+  const handleDelete = async (id) => {
+    if (id) {
+      const result = await Swal.fire({
+        title: "Are you sure?",
+        text: "Do you want to delete this Board?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#dc2626",
+        cancelButtonColor: "#6b7280",
+        confirmButtonText: "Yes, delete it!",
+        cancelButtonText: "Cancel",
+        reverseButtons: true,
+        position: "center",
+      });
+
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch(`https://digiteach.pythonanywhere.com/school_board_detail/${id}/`, {
+            method: "DELETE",
+          });
+          if (!res.ok) throw new Error("Failed to delete job");
+
+          await Swal.fire({
+            title: "Deleted!",
+            text: "Board deleted successfully.",
+            icon: "success",
+            confirmButtonColor: "#16a34a",
+          });
+          fetchSchoolDetailProfile();
+        } catch (err) {
+          console.error(err);
+          Swal.fire({
+            icon: "error",
+            title: "Failed",
+            text: "Could not delete Board",
+            confirmButtonColor: "#dc2626",
+          });
+        }
+      }
+    }
+  }
+
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
@@ -1160,8 +1188,8 @@ export default function SchoolDashboard({ setIsSchool }) {
                   setShowModal(false);
                   setEditBoard(null);
                 }}
-                onSave={handleSave}
                 editData={editBoard}
+                fetchSchoolDetailProfile={fetchSchoolDetailProfile}
               />
             )}
           </>
@@ -1320,15 +1348,15 @@ export default function SchoolDashboard({ setIsSchool }) {
               <p><b>Subject:</b> {selectedJob.subject}</p>
               <p><b>Qualification:</b> {selectedJob.qualification}</p>
               <p><b>Experience:</b> {selectedJob.experience_required}</p>
-              <p><b>Job Type:</b> {selectedJob.job_type}</p>
-              <p><b>Salary:</b> {selectedJob.salary || "Not specified"}</p>
-              <p><b>Location:</b> {selectedJob.city}, {selectedJob.district}</p>
+              {/* <p><b>Job Type:</b> {selectedJob.job_type}</p> */}
+              {/* <p><b>Salary:</b> {selectedJob.salary || "Not specified"}</p> */}
+              {/* <p><b>Location:</b> {selectedJob.city}, {selectedJob.district}</p> */}
               <p><b>Status:</b> {selectedJob.status}</p>
               <p><b>Posted:</b> {new Date(selectedJob.posted_date).toLocaleDateString()}</p>
               {selectedJob.job_description && (
                 <div className="mt-4">
                   <h3 className="font-semibold">Description:</h3>
-                  <p>{selectedJob.job_description}</p>
+                  <p>{parse(selectedJob.job_description)}</p>
                 </div>
               )}
             </div>

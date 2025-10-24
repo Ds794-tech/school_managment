@@ -1,12 +1,33 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { showSuccess, showError } from "../utils/sweetAlertConfig";
+import ReactQuill, { Quill } from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
+// import { debounce } from "lodash";
+// import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
+import { marked } from "marked";
+import geminiImage from '../assets/images/gemini.png';
+
+const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+
+const ai = new GoogleGenAI({
+  apiKey: apiKey,
+  // Optionally, you can set other configuration options here
+});
+
+//   const client = new OpenAI({
+//   apiKey: apiKey,
+//   dangerouslyAllowBrowser: true, // ⚠️ only for testing!
+// });
 
 export default function JobForm({ onSuccess }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditMode = !!id;
   const schoolId = localStorage.getItem("schoolId");
+
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [formData, setFormData] = useState({
     school_data: parseInt(schoolId),
@@ -98,14 +119,14 @@ export default function JobForm({ onSuccess }) {
         subject: formData.subject,
         experience_required: formData.experience_required,
         qualification: formData.qualification,
-        salary_range: Array.isArray(formData.salary_range) 
-          ? formData.salary_range.map(s => s.trim()).filter(s => s) 
+        salary_range: Array.isArray(formData.salary_range)
+          ? formData.salary_range.map(s => s.trim()).filter(s => s)
           : [String(formData.salary_range || '').trim()].filter(s => s),
         posted_date: formData.posted_date,
         last_date_to_apply: formData.last_date_to_apply,
         status: formData.is_active ? "Open" : "Closed"
       };
-      
+
       console.log('Submitting job data:', jobData); // Debug log
 
       const url = isEditMode
@@ -124,9 +145,9 @@ export default function JobForm({ onSuccess }) {
       if (!response.ok) {
         throw new Error(
           responseData.detail ||
-            responseData.message ||
-            Object.values(responseData).flat().join("\n") ||
-            "Failed to save job"
+          responseData.message ||
+          Object.values(responseData).flat().join("\n") ||
+          "Failed to save job"
         );
       }
 
@@ -135,7 +156,7 @@ export default function JobForm({ onSuccess }) {
         isEditMode ? 'The job has been updated successfully.' : 'The job has been posted successfully.'
       );
       if (onSuccess) onSuccess();
-     navigate("/school-dashboard", { state: { activeTab: "jobs" } });
+      navigate("/school-dashboard", { state: { activeTab: "jobs" } });
     } catch (err) {
       console.error("Error saving job:", err);
       const errorMessage = err.message || "An error occurred while saving the job";
@@ -145,6 +166,66 @@ export default function JobForm({ onSuccess }) {
       setLoading(false);
     }
   };
+
+
+  const callGemini = async () => {
+    // const response = await client.responses.create({
+    //   model: "gpt-5",
+    //   input: "Generate a detailed job description for the position of " + formData.job_title + " requiring " + formData.experience_required + " years of experience in " + formData.subject + ". The qualifications needed are " + formData.qualification + ". The job type is " + formData.job_type + " with a salary range of " + (formData.salary_range.length > 0 ? formData.salary_range[0] : "not specified") + ".",
+    // });
+    if (formData.job_title && formData.experience_required && formData.subject && formData.qualification && formData.job_type && formData.salary_range.length > 0) {
+      setIsGenerating(true);
+      setFormData(prev => ({
+        ...prev,
+        job_description: "<p><b>Generating job description...</b></p>"
+      }));
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: "School based Generate a detailed job description for the position of " + formData.job_title + " requiring " + formData.experience_required + " years of experience in " + formData.subject + ". The qualifications needed are " + formData.qualification + ". The job type is " + formData.job_type + " with a salary range of " + (formData.salary_range.length > 0 ? formData.salary_range[0] : "not specified") + "last date to apply" + formData.last_date_to_apply + ". Make sure to include responsibilities, requirements, and skills needed for the job. Format the output in markdown with appropriate headings and bullet points.",
+        max_output_tokens: 500
+      });
+      const startIndex = response.candidates[0].content.parts[0].text.indexOf("Job Title:");
+      const mainContent = startIndex !== -1 ? response.candidates[0].content.parts[0].text.slice(startIndex).trim() : response.candidates[0].content.parts[0].text;
+      const htmlContent = marked(mainContent);
+      setFormData(prev => ({
+        ...prev,
+        job_description: htmlContent
+      }));
+      setIsGenerating(false);
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        job_description: "<p><b>Please fill all the fields Above to generate job description as per given Data.</b></p>"
+      }));
+      setIsGenerating(false);
+    }
+  }
+
+  const modules = {
+    toolbar: {
+      container: [
+        ['bold', 'italic', 'underline', 'strike'],
+        ['blockquote', 'code-block'],
+        ['link', 'image', 'video', 'formula'],
+
+        [{ 'header': 1 }, { 'header': 2 }],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'list': 'check' }],
+        [{ 'script': 'sub' }, { 'script': 'super' }],
+        [{ 'indent': '-1' }, { 'indent': '+1' }],
+        [{ 'direction': 'rtl' }],
+
+        [{ 'size': ['small', false, 'large', 'huge'] }],
+        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'font': [] }],
+        [{ 'align': [] }],
+        ['clean'],
+      ]
+    }
+  };
+
+
 
   return (
     <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-md p-6 my-8">
@@ -276,8 +357,21 @@ export default function JobForm({ onSuccess }) {
 
         {/* Job Description */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Job Description *</label>
-          <textarea
+          <div className="flex justify-between items-center">
+            <label className="block text-sm font-medium text-gray-700">Job Description *</label>
+            <button type="button" disabled={isGenerating} onClick={callGemini} className="flex items-center px-4 py-2 bg-blue-600 text-white cursor-pointer rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              {isGenerating ? (<>
+                <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+                Generating...
+              </>) : (<>
+                Generate Job Description
+              </>)}
+            </button>
+          </div>
+          {/* <textarea
             name="job_description"
             value={formData.job_description}
             onChange={handleChange}
@@ -285,8 +379,17 @@ export default function JobForm({ onSuccess }) {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Enter detailed job description, responsibilities, and requirements..."
             required
-          />
+          /> */}
+          <ReactQuill
+            className="h-80"
+            theme="snow"
+            name="job_description"
+            placeholder={formData.job_description || "Enter detailed job description, responsibilities, and requirements..."}
+            modules={modules}
+            value={formData.job_description}
+            onChange={(value) => setFormData({ ...formData, job_description: value })} />
         </div>
+
 
         {/* Active Checkbox */}
         <div className="flex items-center space-x-2">
@@ -295,13 +398,13 @@ export default function JobForm({ onSuccess }) {
             name="is_active"
             checked={formData.is_active}
             onChange={handleChange}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-32 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
           />
           <label className="text-sm text-gray-700">This job posting is active</label>
         </div>
 
         {/* Buttons */}
-        <div className="flex justify-end space-x-4 pt-4">
+        <div className="flex justify-end space-x-4">
           <button
             type="button"
             onClick={() => navigate(-1)}
@@ -313,9 +416,8 @@ export default function JobForm({ onSuccess }) {
           <button
             type="submit"
             disabled={loading}
-            className={`px-6 py-2 rounded-lg text-white ${
-              loading ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            className={`px-6 rounded-lg text-white ${loading ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
+              }`}
           >
             {loading ? (isEditMode ? "Updating..." : "Posting...") : isEditMode ? "Update Job" : "Post Job"}
           </button>
