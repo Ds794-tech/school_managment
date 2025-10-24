@@ -1,20 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { showSuccess, showError } from "../utils/sweetAlertConfig";
-import ReactQuill, { Quill } from 'react-quill-new';
+import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 // import { debounce } from "lodash";
 // import OpenAI from "openai";
 import { GoogleGenAI } from "@google/genai";
 import { marked } from "marked";
-import geminiImage from '../assets/images/gemini.png';
+// import geminiImage from '../assets/images/gemini.png';
 
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-
-const ai = new GoogleGenAI({
-  apiKey: apiKey,
-  // Optionally, you can set other configuration options here
-});
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 //   const client = new OpenAI({
 //   apiKey: apiKey,
@@ -26,6 +21,11 @@ export default function JobForm({ onSuccess }) {
   const navigate = useNavigate();
   const isEditMode = !!id;
   const schoolId = localStorage.getItem("schoolId");
+
+  const ai = new GoogleGenAI({
+    apiKey: apiKey,
+    // Optionally, you can set other configuration options here
+  });
 
   const [isGenerating, setIsGenerating] = useState(false);
 
