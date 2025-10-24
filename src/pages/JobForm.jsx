@@ -9,8 +9,6 @@ import { GoogleGenAI } from "@google/genai";
 import { marked } from "marked";
 // import geminiImage from '../assets/images/gemini.png';
 
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
 //   const client = new OpenAI({
 //   apiKey: apiKey,
 //   dangerouslyAllowBrowser: true, // ⚠️ only for testing!
@@ -21,6 +19,7 @@ export default function JobForm({ onSuccess }) {
   const navigate = useNavigate();
   const isEditMode = !!id;
   const schoolId = localStorage.getItem("schoolId");
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   const ai = new GoogleGenAI({
     apiKey: apiKey,
