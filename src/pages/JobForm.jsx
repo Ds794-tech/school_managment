@@ -180,7 +180,7 @@ export default function JobForm({ onSuccess }) {
       }));
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: "School based Generate a detailed job description for the position of " + formData.job_title + " requiring " + formData.experience_required + " years of experience in " + formData.subject + ". The qualifications needed are " + formData.qualification + ". The job type is " + formData.job_type + " with a salary range of " + (formData.salary_range.length > 0 ? formData.salary_range[0] : "not specified") + "last date to apply" + formData.last_date_to_apply + ". Make sure to include responsibilities, requirements, and skills needed for the job. Format the output in markdown with appropriate headings and bullet points.",
+        contents: "School based Generate a detailed job description (maximum 400 words) for the position of " + formData.job_title + " requiring " + formData.experience_required + " years of experience in " + formData.subject + ". The qualifications needed are " + formData.qualification + ". The job type is " + formData.job_type + " with a salary range of " + (formData.salary_range.length > 0 ? formData.salary_range[0] : "not specified") + "last date to apply" + formData.last_date_to_apply + ". Make sure to include responsibilities, requirements, and skills needed for the job. Format the output in markdown with appropriate headings and bullet points.",
         max_output_tokens: 500
       });
       const startIndex = response.candidates[0].content.parts[0].text.indexOf("Job Title:");
